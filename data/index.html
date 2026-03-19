@@ -1,0 +1,383 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>GMpro87 ESP32 Admin Panel</title>
+    <style>
+        body {
+            background: #1d2125;
+            color: #f1f1f2;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 99vw;
+            margin: 16px auto 0 auto;
+            background: #242b31;
+            border-radius: 12px;
+            box-shadow: 0 4px 22px rgba(22,22,22,.22);
+            padding: 18px 8px 16px 8px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #292f35;
+            border-radius: 12px 12px 0 0;
+            padding: 15px 0 7px 0;
+            margin-bottom: 18px;
+        }
+        .logo {
+            width: 38px;
+            height: 38px;
+            margin-right: 10px;
+        }
+        .header-title {
+            font-size: 1.32rem;
+            margin: 0;
+            color: #F6C700;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            background: #202428;
+            padding: 10px 0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 500;
+            font-size: .99rem;
+        }
+        .modes {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 0 10px 0;
+        }
+        .toggle-card {
+            background: #1c2126;
+            border-radius: 7px;
+            box-shadow: 0 1px 8px rgba(40,40,40,0.10);
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 70px;
+            max-width: 120px;
+        }
+        .toggle-label {
+            font-size: .91rem;
+            margin-bottom: 6px;
+            color: #F6C700;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        .toggle-btn {
+            width: 70px; height: 26px;
+            border: none;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: .82rem;
+            background: #444857;
+            color: #fff;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+        }
+        .toggle-btn.on { background: #20c20e; color:#23272a; }
+        .toggle-btn.off { background: #c92b2b; color:#fff; }
+        .scan-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-bottom: 11px;
+        }
+        .scan-btn {
+            background: #F6C700;
+            color: #23272a;
+            font-weight: bold;
+            border: none;
+            padding: 7px 17px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: .98rem;
+            transition: background .2s;
+        }
+        .scan-btn:hover { background: #FFD700; }
+        .scan-table-wrap {
+            overflow-x: auto;
+            width: 100%;
+        }
+        table {
+            min-width: 310px;
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            background: #23272a;
+            border-radius: 7px;
+        }
+        th, td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #28292e;
+            text-align: left;
+            font-size: .90rem;
+        }
+        th {
+            background: #222831;
+            color: #F6C700;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) { background: #23272a; }
+        tr:nth-child(odd) { background: #292f37; }
+        .select-btn {
+            background: #0066ff;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 7px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: .83rem;
+        }
+        .select-btn:hover { background: #20c20e; color: #23272a; }
+        .target-info {
+            margin: 13px 0 0 0; padding-left: 2px;
+            font-size: 1.04rem;
+            word-break: break-all;
+        }
+        .footer { text-align: center; color: #888; padding: 13px 0 10px 0; font-size: .98rem; margin-top: 11px;}
+        .setting-panel {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(30,32,35,0.62);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 44;
+        }
+        .setting-panel-content {
+            background: #25272c;
+            border-radius: 11px;
+            padding: 18px 16px;
+            min-width: 320px;
+            max-width: 97vw;
+            box-shadow: 0 4px 24px rgba(20,20,20,0.19);
+        }
+        .setting-title { color:#F6C700;font-size:1.15rem;margin-bottom:12px;}
+        .close-setting { background:#c92b2b;color:#fff;font-weight:bold;border:none;padding:5px 22px;border-radius:7px;cursor:pointer;margin-top:14px;font-size:.97rem;}
+        .html-menu-title { color: #F6C700; font-size: 1.07rem; margin-bottom: 8px; letter-spacing: 1px;}
+        .html-menu-file-list select {
+            background: #292f31;
+            color: #fff;
+            border-radius: 6px;
+            border:1px solid #475059;
+            font-size: .89rem;
+            padding: 4px 6px;
+        }
+        .form-label { color:#F6C700;display:block;margin:10px 0 3px 0;font-size:.96rem; font-weight:600;}
+        .form-input { width:100%;border-radius:4px;border:1px solid #3f464c;padding:5px 3px;margin-bottom:7px;font-size:.98rem;background:#292f31;color:#fff;}
+        .add-btn {
+            background: #0066ff;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            padding: 6px 18px;
+            margin: 0 0 7px 0;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: .92rem;
+        }
+        .remove-btn {
+            background: #c92b2b;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 11px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: .89rem;
+        }
+        .form-submit { background:#F6C700;color:#23272a;font-weight:bold;border:none;padding:6px 19px;border-radius:7px;cursor:pointer;font-size:.98rem;}
+        .beacon-ssid-list { margin-bottom: 9px;}
+        .beacon-ssid-list label {margin-right:6px;}
+        @media (max-width: 490px) {
+            .header-title { font-size: .98rem; }
+            .logo { width: 28px; height: 28px; margin-right: 7px; }
+            .container { padding: 7px 2vw; }
+            th,td { font-size: .81rem; }
+            .setting-panel-content { min-width:160px;padding:10px 4px;}
+        }
+        @media (max-width: 330px) {
+            .container { padding: 1px .8vw; }
+            .header-title { font-size: .8rem;}
+            .setting-panel-content { min-width:70px;padding:4px 2px;}
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <!-- SVG LOGO GMpro87 -->
+        <svg class="logo" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="19" fill="#F6C700" stroke="#242b31" stroke-width="1.7"/>
+            <text x="20" y="25" text-anchor="middle" font-size="15" font-family="Segoe UI,Arial,sans-serif" font-weight="bold" fill="#23272a">GM</text>
+            <text x="20" y="33" text-anchor="middle" font-size="6.4" font-family="Segoe UI,Arial,sans-serif" fill="#23272a">pro87</text>
+        </svg>
+        <span class="header-title">GMpro87 ESP32 Admin Panel</span>
+    </div>
+    <div class="container">
+        <!-- BAR: Setting + Scan -->
+        <div class="scan-bar">
+            <button class="scan-btn" onclick="toggleSetting()">Setting</button>
+            <form method="post" action="/?scan=1" style="display:inline-block;">
+                <button class="scan-btn">Scan WiFi</button>
+            </form>
+        </div>
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span>Beacon: <span id="beacon-status">Aktif</span></span>
+            <span>Evil Twin: <span id="evil-status">Mati</span></span>
+            <span>Deauth: <span id="deauth-status">Mati</span></span>
+            <span>Probe: <span id="probe-status">Mati</span></span>
+            <span>Jammer: <span id="jammer-status">Mati</span></span>
+        </div>
+        <!-- MODE CARDS -->
+        <div class="modes">
+            <form class="toggle-card" method="post" action="/?beacon=">
+                <div class="toggle-label">Beacon Spam</div>
+                <button type="submit" class="toggle-btn on" name="beacon" value="toggle">ON/OFF</button>
+            </form>
+            <form class="toggle-card" method="post" action="/?evil=">
+                <div class="toggle-label">Evil Twin</div>
+                <button type="submit" class="toggle-btn off" name="evil" value="toggle">ON/OFF</button>
+            </form>
+            <form class="toggle-card" method="post" action="/?deauth=">
+                <div class="toggle-label">Deauth</div>
+                <button type="submit" class="toggle-btn off" name="deauth" value="toggle">ON/OFF</button>
+            </form>
+            <form class="toggle-card" method="post" action="/?probe=">
+                <div class="toggle-label">Probe Spam</div>
+                <button type="submit" class="toggle-btn off" name="probe" value="toggle">ON/OFF</button>
+            </form>
+            <form class="toggle-card" method="post" action="/?jam=">
+                <div class="toggle-label">Jammer</div>
+                <button type="submit" class="toggle-btn off" name="jam" value="toggle">ON/OFF</button>
+            </form>
+        </div>
+        <!-- WiFi Scan Table -->
+        <div class="scan-table-wrap">
+            <table>
+                <tr>
+                    <th>SSID</th>
+                    <th>BSSID</th>
+                    <th>CH</th>
+                    <th>Sinyal</th>
+                    <th>Select</th>
+                </tr>
+                <!-- Contoh isi (backend inject di ESP32) -->
+                <tr>
+                    <td>IndiHome</td>
+                    <td>F8:32:A7:CD:F1:23</td>
+                    <td>7</td>
+                    <td>
+                        <span style="color:#20c20e;font-weight:bold;">-47 dBm</span>
+                        <span style="color:#F6C700;">&#9608;&#9608;&#9608;&#9608;</span>
+                    </td>
+                    <td>
+                        <form method="post" action="/?ap=F8:32:A7:CD:F1:23">
+                            <button class="select-btn">Select</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr>
+                    <td><i style="color:#888;">[hidden]</i></td>
+                    <td>D6:5A:B3:6C:E2:01</td>
+                    <td>11</td>
+                    <td>
+                        <span style="color:#df4237;">-83 dBm</span>
+                        <span style="color:#F6C700;">&#9608;&#9608;</span>
+                    </td>
+                    <td>
+                        <form method="post" action="/?ap=D6:5A:B3:6C:E2:01">
+                            <button class="select-btn">Select</button>
+                        </form>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="target-info">
+            <li>Target SSID: <b><!-- Target SSID inject --></b></li>
+            <li>BSSID: <!-- Target BSSID inject --></li>
+            <li>CH: <!-- Target channel inject --></li>
+        </div>
+    </div>
+    <!-- SETTING MODAL/PANEL -->
+    <div id="setting-panel" class="setting-panel">
+        <div class="setting-panel-content">
+            <h3 class="setting-title">Pengaturan</h3>
+            <!-- Beacon spam setting SSID dynamic -->
+            <form method="post" action="/set_beacon" id="beacon-form">
+                <label class="form-label">Jumlah Beacon Spam:</label>
+                <input type="number" class="form-input" id="beacon_count" name="beacon_count" min="1" max="50" value="6">
+                <label class="form-label">Nama SSID Beacon Spam:</label>
+                <div class="beacon-ssid-list" id="ssid-list"></div>
+                <button type="button" class="add-btn" onclick="addSSID()">Add SSID</button>
+                <button type="submit" class="form-submit" style="margin-top:10px;">Simpan Beacon Spam</button>
+            </form>
+            <hr style="margin:18px 0 13px 0;">
+            <!-- etwin file upload/view -->
+            <div class="html-menu-title">Upload/View etwin1.html–etwin5.html</div>
+            <form method="post" action="/upload_html" enctype="multipart/form-data" style="margin-bottom:14px;">
+                <label for="htmlfile">Upload etwin file:</label>
+                <input type="file" id="htmlfile" name="htmlfile" accept=".html">
+                <button type="submit" class="form-submit" style="margin-left:8px;">Save</button>
+            </form>
+            <div style="margin-bottom:7px;">View File:</div>
+            <div class="html-menu-file-list">
+                <form method="get" action="/view_html" style="display:inline;">
+                    <select name="file">
+                        <option value="etwin1.html">etwin1.html</option>
+                        <option value="etwin2.html">etwin2.html</option>
+                        <option value="etwin3.html">etwin3.html</option>
+                        <option value="etwin4.html">etwin4.html</option>
+                        <option value="etwin5.html">etwin5.html</option>
+                    </select>
+                    <button type="submit" class="select-btn" style="margin-left:6px;">View</button>
+                </form>
+            </div>
+            <button class="close-setting" onclick="toggleSetting()">Close</button>
+        </div>
+    </div>
+    <div class="footer">
+        GMpro87 ESP32 &copy; All rights reserved.
+    </div>
+    <script>
+        function toggleSetting() {
+            var el = document.getElementById('setting-panel');
+            el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+        }
+        // Dynamic SSID list Beacon Spam
+        let ssidIdx = 0;
+        function addSSID() {
+            var list = document.getElementById('ssid-list');
+            var count = document.getElementById('beacon_count').value;
+            if (list.children.length >= 50) return;
+            ssidIdx++;
+            var div = document.createElement('div');
+            div.style.marginBottom = '5px';
+            div.innerHTML = "<label>SSID " + ssidIdx + ":</label>"
+                + "<input type='text' name='ssid_" + ssidIdx + "' class='form-input' placeholder='SSID Spam'>"
+                + "<button type='button' class='remove-btn' onclick='removeSSID(this)'>Remove</button>";
+            list.appendChild(div);
+            document.getElementById('beacon_count').value = list.children.length;
+        }
+        function removeSSID(btn) {
+            var list = document.getElementById('ssid-list');
+            list.removeChild(btn.parentNode);
+            document.getElementById('beacon_count').value = list.children.length;
+        }
+    </script>
+</body>
+</html>
