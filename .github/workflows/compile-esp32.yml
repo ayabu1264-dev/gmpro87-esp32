@@ -26,56 +26,62 @@ jobs:
 
     - name: Install Arduino CLI
       run: |
+        # Download & install Arduino CLI
         curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-        sudo mv arduino-cli /usr/local/bin/
+        # Add to PATH
+        echo "$PWD/bin" >> $GITHUB_PATH
         arduino-cli version
 
-    - name: Install ESP32 Board
+    - name: Install ESP32 Board & Libraries
       run: |
-        arduino-cli config init
-        arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+        arduino-cli config init --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+        arduino-cli core update-index
         arduino-cli core install esp32:esp32@2.0.17
         arduino-cli lib update-index
-        arduino-cli lib install "WiFi" "ESP32 BLE Arduino"
+        arduino-cli lib install "ESP32 BLE Arduino"
+
+    - name: Verify ESP32 Board
+      run: |
+        arduino-cli board listall | grep esp32
 
     - name: Compile ESP32 Firmware
       run: |
-        mkdir -p build
+        mkdir -p build cache
         arduino-cli compile \
           --fqbn esp32:esp32:esp32dev \
-          --build-cache-path .cache \
+          --build-cache-path ./cache \
           --output-dir ./build \
           --export-binaries \
           ./
 
-    - name: List compiled files
+    - name: Show compiled files
       run: |
         ls -la build/
-        file build/*.bin
+        du -sh build/*.bin
 
-    - name: Upload Firmware Artifact
+    - name: Upload Firmware
       uses: actions/upload-artifact@v4
       with:
-        name: gmpro87-esp32-firmware
+        name: gmpro87-esp32-firmware-v${{ github.run_number }}
         path: |
-          build/gmpro87-esp32.ino.esp32.esp32dev.bin
-          build/gmpro87-esp32.ino.esp32.esp32dev.with_bootloader.bin
-        retention-days: 90
+          build/*.bin
+        retention-days: 30
 
-    - name: Create Release
-      if: github.ref == 'refs/heads/main'
+    - name: Create GitHub Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: |
-          build/gmpro87-esp32.ino.esp32.esp32dev.bin
-          build/gmpro87-esp32.ino.esp32.esp32dev.with_bootloader.bin
+        files: build/*.bin
         tag_name: v${{ github.run_number }}
-        name: GMpro87 ESP32 v${{ github.run_number }}
+        name: "GMpro87 ESP32 v${{ github.run_number }}"
         body: |
-          # 🚀 GMpro87 ESP32 Firmware
+          # 🎯 **GMpro87 ESP32 Firmware**
           
-          **Flash Size:** ~1.2MB  
-          **Board:** ESP32 Dev Module
+          **✅ Build:** #${{ github.run_number }}
+          **📏 Size:** ~1.2MB
+          **🎯 Board:** ESP32 Dev Module
           
-          ## 📥 Download:
+          ## 📥 **Flash Files:**
           
