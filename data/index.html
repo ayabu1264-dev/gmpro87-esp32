@@ -242,6 +242,8 @@
             <span>Deauth: <span id="deauth-status">Mati</span></span>
             <span>Probe: <span id="probe-status">Mati</span></span>
             <span>Jammer: <span id="jammer-status">Mati</span></span>
+            <span>BLE Spam: <span id="ble-status">Mati</span></span>
+            <span>Blu Jammer: <span id="blu-status">Mati</span></span>
         </div>
         <!-- MODE CARDS -->
         <div class="modes">
@@ -264,6 +266,15 @@
             <form class="toggle-card" method="post" action="/?jam=">
                 <div class="toggle-label">Jammer</div>
                 <button type="submit" class="toggle-btn off" name="jam" value="toggle">ON/OFF</button>
+            </form>
+            <form class="toggle-card" method="post" action="/?ble=">
+                <div class="toggle-label">BLE Spam</div>
+                <button type="submit" class="toggle-btn off" name="ble" value="toggle">ON/OFF</button>
+            </form>
+            <!-- NEW BLU JAMMER BUTTON -->
+            <form class="toggle-card" method="post" action="/?blu=">
+                <div class="toggle-label">Blu Jammer</div>
+                <button type="submit" class="toggle-btn off" name="blu" value="toggle">ON/OFF</button>
             </form>
         </div>
         <!-- WiFi Scan Table -->
@@ -370,14 +381,4 @@
             div.innerHTML = "<label>SSID " + ssidIdx + ":</label>"
                 + "<input type='text' name='ssid_" + ssidIdx + "' class='form-input' placeholder='SSID Spam'>"
                 + "<button type='button' class='remove-btn' onclick='removeSSID(this)'>Remove</button>";
-            list.appendChild(div);
-            document.getElementById('beacon_count').value = list.children.length;
-        }
-        function removeSSID(btn) {
-            var list = document.getElementById('ssid-list');
-            list.removeChild(btn.parentNode);
-            document.getElementById('beacon_count').value = list.children.length;
-        }
-    </script>
-</body>
-</html>
+            list.appendChild
