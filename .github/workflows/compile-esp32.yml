@@ -1,5 +1,4 @@
-name: ESP32 Firmware Builder
-
+name: PlatformIO Build
 on:
   push:
     branches: [ main ]
@@ -8,70 +7,38 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Python & tools
-      run: |
-        sudo apt update
-        sudo apt install -y wget curl python3-pip
-        pip3 install pyserial esptool
-
-    - name: Download Arduino CLI
-      run: |
-        # Latest version
-        VERSION=$(curl -sL https://api.github.com/repos/arduino/arduino-cli/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
-        echo "Installing Arduino CLI v$VERSION"
-        wget "https://github.com/arduino/arduino-cli/releases/download/v${VERSION}/arduino-cli_${VERSION}_Linux_64bit.tar.gz"
-        tar xzf arduino-cli_*.tar.gz
-        sudo mv arduino-cli /usr/local/bin/
-        arduino-cli version
-
-    - name: Install ESP32 Platform
-      run: |
-        # Update index WITH ESP32 URL first
-        arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-        
-        # Install ESP32 core
-        arduino-cli core install esp32:esp32@2.0.17
-        
-        # Verify boards
-        arduino-cli board listall | grep esp32
-
-    - name: Compile firmware
-      run: |
-        mkdir -p build
-        arduino-cli compile . \
-          --fqbn esp32:esp32:esp32dev \
-          --output-dir build \
-          --export-binaries
-
-    - name: Verify output
-      run: |
-        ls -la build/
-        du -sh build/*.bin
-
-    - name: Package firmware
-      run: |
-        cp build/*.bin firmware/
-        zip -r gmpro87-esp32-firmware.zip firmware/
-
-    - name: Upload BIN files
+    - uses: actions/checkout@v4
+    
+    - name: Cache PlatformIO
+      uses: actions/cache@v4
+      with:
+        key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+        path: |
+          ~/.platformio/.cache
+          ~/.platformio/packages
+    
+    - name: PlatformIO Build
+      uses: platformio/action@v1
+      env:
+        PLATFORMIO_AUTH_TOKEN: ${{ secrets.PLATFORMIO_AUTH_TOKEN }}
+      with:
+        platform: espressif32@6.7.0
+        env: esp32dev
+    
+    - name: Upload Firmware
       uses: actions/upload-artifact@v4
       with:
-        name: GMpro87_ESP32_Firmware
+        name: GMpro87_ESP32_v${{ github.run_number }}
         path: |
-          build/*.bin
-          gmpro87-esp32-firmware.zip
-
-    - name: Create Release
+          .pio/build/esp32dev/firmware.bin
+          .pio/build/esp32dev/firmware.elf
+    
+    - name: Release
       if: github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          build/*.bin
-          gmpro87-esp32-firmware.zip
+          .pio/build/esp32dev/firmware.bin
         tag_name: v${{ github.run_number }}
         name: GMpro87 ESP32 v${{ github.run_number }}
