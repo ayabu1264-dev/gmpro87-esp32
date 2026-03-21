@@ -1,4 +1,4 @@
-name: PlatformIO Build
+name: PlatformIO CI
 on:
   push:
     branches: [ main ]
@@ -8,32 +8,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Cache PlatformIO
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache PiO
       uses: actions/cache@v4
       with:
         key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
         path: |
           ~/.platformio/.cache
           ~/.platformio/packages
-    
-    - name: PlatformIO Build
-      uses: platformio/action@v1
-      env:
-        PLATFORMIO_AUTH_TOKEN: ${{ secrets.PLATFORMIO_AUTH_TOKEN }}
+          ~/.platformio/platforms
+          ~/.platformio/.pioenv
+
+    - name: Build ESP32 Firmware
+      uses: denysdovhan/actions-platformio@v1.1.0  ; ← Action BENAR!
       with:
         platform: espressif32@6.7.0
         env: esp32dev
-    
+
     - name: Upload Firmware
       uses: actions/upload-artifact@v4
       with:
         name: GMpro87_ESP32_v${{ github.run_number }}
         path: |
           .pio/build/esp32dev/firmware.bin
-          .pio/build/esp32dev/firmware.elf
-    
+          .pio/build/esp32dev/programming.bin
+
     - name: Release
       if: github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
@@ -41,4 +42,4 @@ jobs:
         files: |
           .pio/build/esp32dev/firmware.bin
         tag_name: v${{ github.run_number }}
-        name: GMpro87 ESP32 v${{ github.run_number }}
+        name: "GMpro87 ESP32 DevKitC v${{ github.run_number }}"
