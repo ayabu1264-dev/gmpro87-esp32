@@ -12,24 +12,30 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Setup environment
+    - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    - name: Install tools
+    - name: Install Python tools
+      run: pip install pyserial esptool
+
+    - name: Download Arduino CLI (Latest Stable)
       run: |
-        pip install pyserial esptool
-        # Download Arduino CLI directly
-        wget https://github.com/arduino/arduino-cli/releases/download/0.35.3/arduino-cli_0.35.3_Linux_64bit.tar.gz
-        tar -xzf arduino-cli_0.35.3_Linux_64bit.tar.gz
+        # Get latest Arduino CLI version
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/arduino/arduino-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+        echo "Latest version: $LATEST_VERSION"
+        
+        # Download & install
+        wget "https://github.com/arduino/arduino-cli/releases/download/${LATEST_VERSION}/arduino-cli_${LATEST_VERSION#v}_Linux_64bit.tar.gz"
+        tar -xzf arduino-cli_*.tar.gz
         sudo mv arduino-cli /usr/local/bin/
         arduino-cli version
 
-    - name: Configure Arduino CLI
+    - name: Setup Arduino CLI
       run: |
         arduino-cli config init --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
         arduino-cli core update-index
@@ -40,7 +46,7 @@ jobs:
         arduino-cli lib update-index
         arduino-cli lib install "ESP32 BLE Arduino"
 
-    - name: Compile firmware
+    - name: Compile
       run: |
         mkdir -p build
         arduino-cli compile \
@@ -49,28 +55,19 @@ jobs:
           --export-binaries \
           ./
 
-    - name: Verify build
-      run: |
-        ls -la build/
-        file build/*.bin 2>/dev/null || echo "No .bin files"
+    - name: Verify
+      run: ls -la build/
 
-    - name: Upload artifacts
+    - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: gmpro87-esp32-${{ github.run_number }}
-        path: |
-          build/*.bin
-          build/*.elf
-        if-no-files-found: ignore
+        name: firmware-${{ github.run_number }}
+        path: build/*.bin
 
-    - name: Release (main branch only)
+    - name: Release
       if: github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
       with:
         files: build/*.bin
         tag_name: v${{ github.run_number }}
-        name: GMpro87 ESP32 v${{ github.run_number }}
-        body: |
-          # GMpro87 ESP32 Firmware
-          **Flash:** `esptool.py --chip esp32 write_flash 0x1000 build/*.bin`
-        draft: false
+        name: GMpro87 v${{ github.run_number }}
