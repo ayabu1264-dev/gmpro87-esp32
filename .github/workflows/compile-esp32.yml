@@ -15,15 +15,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Cache ESP32 tools
-      uses: actions/cache@v4
-      id: esp32-cache
-      with:
-        path: |
-          ~/.arduino15/packages/esp32
-          ~/.cache/arduino
-        key: esp32-core-${{ hashFiles('**/*.ino', '**/platform.local.txt') }}
-
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
@@ -31,46 +22,60 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install pyserial esptool
+        python -m pip install --upgrade pip pyserial esptool
 
     - name: Install Arduino CLI
-      uses: arduino/setup-arduino-cli@v1
-      with:
-        version: latest
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+        sudo mv arduino-cli /usr/local/bin/
+        arduino-cli version
 
     - name: Install ESP32 Board
       run: |
+        arduino-cli config init
         arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
         arduino-cli core install esp32:esp32@2.0.17
+        arduino-cli lib update-index
+        arduino-cli lib install "WiFi" "ESP32 BLE Arduino"
 
     - name: Compile ESP32 Firmware
       run: |
-        arduino-cli compile --fqbn esp32:esp32:esp32dev \
-          --build-cache-path .arduino_cache \
+        mkdir -p build
+        arduino-cli compile \
+          --fqbn esp32:esp32:esp32dev \
+          --build-cache-path .cache \
           --output-dir ./build \
+          --export-binaries \
           ./
 
+    - name: List compiled files
+      run: |
+        ls -la build/
+        file build/*.bin
+
     - name: Upload Firmware Artifact
-      uses: actions/upload-artifact@v4  # ← v4 FIX!
+      uses: actions/upload-artifact@v4
       with:
         name: gmpro87-esp32-firmware
         path: |
-          ./build/gmpro87-esp32.ino.esp32.esp32dev.bin
-          ./build/gmpro87-esp32.ino.esp32.esp32dev.with_bootloader.bin
-        retention-days: 30
+          build/gmpro87-esp32.ino.esp32.esp32dev.bin
+          build/gmpro87-esp32.ino.esp32.esp32dev.with_bootloader.bin
+        retention-days: 90
 
-    - name: Create Release (on push to main)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          ./build/gmpro87-esp32.ino.esp32.esp32dev.bin
-          ./build/gmpro87-esp32.ino.esp32.esp32dev.with_bootloader.bin
+          build/gmpro87-esp32.ino.esp32.esp32dev.bin
+          build/gmpro87-esp32.ino.esp32.esp32dev.with_bootloader.bin
         tag_name: v${{ github.run_number }}
         name: GMpro87 ESP32 v${{ github.run_number }}
         body: |
-          ## 🚀 **GMpro87 ESP32 Firmware v${{ github.run_number }}**
+          # 🚀 GMpro87 ESP32 Firmware
           
-          ### 📁 **Download Files:**
+          **Flash Size:** ~1.2MB  
+          **Board:** ESP32 Dev Module
+          
+          ## 📥 Download:
           
