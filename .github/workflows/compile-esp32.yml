@@ -1,9 +1,7 @@
-name: Compile ESP32 Firmware
+name: ESP32 Firmware Builder
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
@@ -12,54 +10,68 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install ESP tools
+    - name: Install Python & tools
       run: |
-        pip install pyserial esptool
+        sudo apt update
+        sudo apt install -y wget curl python3-pip
+        pip3 install pyserial esptool
 
-    - name: Install Arduino CLI (Stable)
+    - name: Download Arduino CLI
       run: |
-        # Get latest release tag
-        VERSION=$(curl -s https://api.github.com/repos/arduino/arduino-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
-        echo "Arduino CLI v$VERSION"
-        
-        # Download exact filename
+        # Latest version
+        VERSION=$(curl -sL https://api.github.com/repos/arduino/arduino-cli/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+        echo "Installing Arduino CLI v$VERSION"
         wget "https://github.com/arduino/arduino-cli/releases/download/v${VERSION}/arduino-cli_${VERSION}_Linux_64bit.tar.gz"
         tar xzf arduino-cli_*.tar.gz
         sudo mv arduino-cli /usr/local/bin/
-        rm arduino-cli_*.tar.gz
-        
         arduino-cli version
 
-    - name: Setup ESP32
+    - name: Install ESP32 Platform
       run: |
-        arduino-cli config init --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-        arduino-cli core update-index
+        # Update index WITH ESP32 URL first
+        arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+        
+        # Install ESP32 core
         arduino-cli core install esp32:esp32@2.0.17
-        arduino-cli board listall esp32:esp32
+        
+        # Verify boards
+        arduino-cli board listall | grep esp32
 
-    - name: Compile
+    - name: Compile firmware
       run: |
         mkdir -p build
-        arduino-cli compile \
+        arduino-cli compile . \
           --fqbn esp32:esp32:esp32dev \
           --output-dir build \
-          --export-binaries \
-          ./
+          --export-binaries
 
-    - name: Results
+    - name: Verify output
       run: |
-        ls -lh build/ || echo "Build dir empty"
+        ls -la build/
+        du -sh build/*.bin
 
-    - name: Upload
+    - name: Package firmware
+      run: |
+        cp build/*.bin firmware/
+        zip -r gmpro87-esp32-firmware.zip firmware/
+
+    - name: Upload BIN files
       uses: actions/upload-artifact@v4
       with:
-        name: firmware-v${{ github.run_number }}
-        path: build/*.bin
+        name: GMpro87_ESP32_Firmware
+        path: |
+          build/*.bin
+          gmpro87-esp32-firmware.zip
+
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          build/*.bin
+          gmpro87-esp32-firmware.zip
+        tag_name: v${{ github.run_number }}
+        name: GMpro87 ESP32 v${{ github.run_number }}
